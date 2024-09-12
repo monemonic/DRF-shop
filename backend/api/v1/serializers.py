@@ -73,39 +73,17 @@ class ProductReadSerializer(serializers.ModelSerializer):
 
 class ShoppingCartUpdateSerializer(serializers.ModelSerializer):
     amount = serializers.CharField()
-    product = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
 
     class Meta:
         model = ShoppingCart
-        fields = ('amount', "product")
+        fields = ('amount',)
 
     def validate_amount(self, value):
-        print(type(value), value)
         if value.isdigit():
-            print('odin')
             return int(value)
-        elif value == '+':
-            print('dva')
-            return 1
-        elif value == '-':
-            return -1
-        print('tri')
+        elif value in ["+", "-"]:
+            return value
         raise serializers.ValidationError("Неверный формат для поля amount. Ожидается число, '+' или '-'.")
-
-    def update(self, instance, validated_data):
-        print("puk")
-        amount = validated_data.get('amount')
-
-        if isinstance(amount, int):
-            instance.amount += amount
-        elif amount == '+':
-            instance.amount += 1
-        elif amount == '-':
-            instance.amount = max(1, instance.amount - 1)
-        print(instance)
-        print(validated_data)
-        instance.save()
-        return super().update(instance, validated_data)
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):

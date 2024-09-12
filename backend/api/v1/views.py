@@ -35,24 +35,19 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         """Добавление и удаление продуктов из корзины."""
 
         if request.method == 'PATCH':
-            product = get_object_or_404(ShoppingCart, product=pk).product
-            amount = request.data.get('amount')
-            if amount:
-                print('1')
-                serializer = ShoppingCartUpdateSerializer(
-                    data=(
-                        {"amount": request.data["amount"], "product": product, "user": self.request.user.id}
-                    )
-                )
-                print(serializer)
-                serializer.is_valid(raise_exception=True)
-                serializer.save(product=product, user=self.request.user)
+            product = get_object_or_404(ShoppingCart, product=pk)
+            serializer = ShoppingCartUpdateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            amount = serializer.validated_data.get("amount")
 
-            else:
-                return Response(
-                    "Вы не добавляли в корзину этот продукт.",
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            if amount == '+':
+                product.amount += 1
+            if amount == '-':
+                product.amount -= 1
+            if isinstance(amount, int):
+                product.amount = amount
+            product.save()
+            serializer = ShoppingCartSerializer(product)
 
         else:
             product = get_object_or_404(Product, pk=pk).pk
@@ -64,7 +59,6 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
-        
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @shopping_cart.mapping.delete
