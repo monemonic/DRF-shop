@@ -84,9 +84,11 @@ class ShoppingCartUpdateSerializer(serializers.ModelSerializer):
         if value.isdigit():
             print('odin')
             return int(value)
-        elif value in ['+', '-']:
+        elif value == '+':
             print('dva')
-            return value
+            return 1
+        elif value == '-':
+            return -1
         print('tri')
         raise serializers.ValidationError("Неверный формат для поля amount. Ожидается число, '+' или '-'.")
 
@@ -95,7 +97,7 @@ class ShoppingCartUpdateSerializer(serializers.ModelSerializer):
         amount = validated_data.get('amount')
 
         if isinstance(amount, int):
-            instance.amount = amount
+            instance.amount += amount
         elif amount == '+':
             instance.amount += 1
         elif amount == '-':
