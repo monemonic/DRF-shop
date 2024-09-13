@@ -87,7 +87,7 @@ class ShoppingCartUpdateSerializer(serializers.ModelSerializer):
     def validate_amount(self, value):
         if value.isdigit():
             return int(value)
-        elif value in ["+", "-"]:
+        elif value in ("+", "-"):
             return value
         raise serializers.ValidationError(
             "Неверный формат для поля amount. Ожидается число, '+' или '-'."
@@ -112,7 +112,9 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
     """Создание и удаление продуктов из корзины."""
 
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all()
+    )
 
     class Meta:
         model = ShoppingCart
@@ -123,7 +125,7 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
         if ShoppingCart.objects.filter(
             user=user, product=data["product"]
-        ).exists():
+        ):
             raise serializers.ValidationError(
                 {"product": "Нельза добавлять в "
                  "корзину одинаковые продукты."

@@ -40,17 +40,17 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ProductReadSerializer
     pagination_class = PageNumberPagination
 
-    @action(detail=True, methods=["POST", "PATCH"])
+    @action(detail=True, methods=("POST", "PATCH"))
     def add_shopping_cart(self, request, pk):
         """Добавление, изменение количества и удаление продуктов из корзины."""
-        if request.method == 'PATCH':
+        if request.method == "PATCH":
             serializer = ShoppingCartUpdateSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             amount = serializer.validated_data.get("amount")
             product = get_object_or_404(ShoppingCart, product=pk)
-            if amount == '+':
+            if amount == "+":
                 product.amount += CHANGE_VALUE_SHOPPING_CART
-            elif amount == '-':
+            elif amount == "-":
                 product.amount -= CHANGE_VALUE_SHOPPING_CART
             else:
                 product.amount = amount
@@ -95,7 +95,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             status=status.HTTP_204_NO_CONTENT
         )
 
-    @action(detail=False, methods=["DELETE"])
+    @action(detail=False, methods=("DELETE",))
     def clean_all_shopping_cart(self, request):
         """Удаление всех продуктов из корзины пользователя."""
         count_del_objects, _ = ShoppingCart.objects.filter(
@@ -113,7 +113,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             status=status.HTTP_204_NO_CONTENT
         )
 
-    @action(detail=False, methods=["GET"],
+    @action(detail=False, methods=("GET",),
             permission_classes=(IsAuthenticated,)
             )
     def shopping_cart(self, request):
@@ -123,7 +123,9 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         """
         queryset = ShoppingCart.objects.filter(user=self.request.user)
         count_products = len(queryset)
-        total_price = sum([i.product.price*i.amount for i in queryset])
+        total_price = sum(
+            (product.product.price*product.amount for product in queryset)
+        )
         serializer = ShoppingCartAllProductsSerializer(
             queryset,
             context={'count': count_products, "total_price": total_price}
