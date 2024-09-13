@@ -1,15 +1,18 @@
 from django.contrib import admin
 
-from .models import Category, Product, Subcategory, ImageProduct
+from .models import Category, ImageProduct, Product, Subcategory
 
 
 class ImageProductInline(admin.StackedInline):
+    """Добавление изображений продукта."""
+
     model = ImageProduct
     extra = 1
     max_num = 3
 
 
 class ProductAdmin(admin.ModelAdmin):
+    """Добавление, удаление, изменений продуктов."""
     inlines = (ImageProductInline,)
     list_display = (
         "name",

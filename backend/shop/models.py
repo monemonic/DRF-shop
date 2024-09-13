@@ -1,16 +1,16 @@
-from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
 
 from backend.constants import (
     CATEGORY_NAME_MAX_LENGTH,
-    TAG_CATEGORY_FIELD_MAX_LENGTH,
-    PRODUCT_NAME_FIELD_MAX_LENGTH,
-    PRODUCT_SLUG_FIELD_MAX_LENGTH,
-    MIN_VALUE_VALIDATOR_PRICE,
+    MAX_VALUE_VALIDATOR_AMOUNT,
     MAX_VALUE_VALIDATOR_PRICE,
     MIN_VALUE_VALIDATOR_AMOUNT,
-    MAX_VALUE_VALIDATOR_AMOUNT
+    MIN_VALUE_VALIDATOR_PRICE,
+    PRODUCT_NAME_FIELD_MAX_LENGTH,
+    PRODUCT_SLUG_FIELD_MAX_LENGTH,
+    TAG_CATEGORY_FIELD_MAX_LENGTH,
 )
 
 
@@ -18,6 +18,8 @@ User = get_user_model()
 
 
 class Category(models.Model):
+    """Модель категории."""
+
     name = models.CharField(
         "Название",
         max_length=CATEGORY_NAME_MAX_LENGTH,
@@ -46,8 +48,11 @@ class Category(models.Model):
 
 
 class Subcategory(models.Model):
+    """Модель подкатегории."""
+
     category = models.ForeignKey(
-        Category, on_delete=models.CASCADE, verbose_name="Подкатегория"
+        Category, on_delete=models.CASCADE, verbose_name="Подкатегория",
+        help_text="К какой категории относится данная подкатегория",
     )
     name = models.CharField(
         "Название",
@@ -77,10 +82,13 @@ class Subcategory(models.Model):
 
 
 class Product(models.Model):
+    """Модель продукта."""
+
     subcategory = models.ForeignKey(
         Subcategory,
         on_delete=models.CASCADE,
-        verbose_name="Подкатегория продукта"
+        verbose_name="Подкатегория продукта",
+        help_text="К какой подкатегории относится продукт",
     )
     name = models.CharField(
         "Название",
@@ -121,6 +129,8 @@ class Product(models.Model):
 
 
 class ImageProduct(models.Model):
+    """Модель изображений связанных с продуктами."""
+
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, verbose_name="Продукт"
     )
@@ -139,6 +149,8 @@ class ImageProduct(models.Model):
 
 
 class ShoppingCart(models.Model):
+    """Модель корзины."""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -154,17 +166,17 @@ class ShoppingCart(models.Model):
     amount = models.PositiveSmallIntegerField(
         "Количество",
         help_text="Количество продуктов",
-        # validators=[
-        #     MinValueValidator(
-        #         MIN_VALUE_VALIDATOR_AMOUNT,
-        #         message=f"Значение не может быть меньше, \
-        #             чем {MIN_VALUE_VALIDATOR_AMOUNT}",
-        #     ),
-        #     MaxValueValidator(
-        #         MAX_VALUE_VALIDATOR_AMOUNT,
-        #         message=f"Значение не может быть больше, \
-        #             чем {MIN_VALUE_VALIDATOR_AMOUNT}",
-        #     ),
-        # ],
+        validators=[
+            MinValueValidator(
+                MIN_VALUE_VALIDATOR_AMOUNT,
+                message=f"Значение не может быть меньше, \
+                    чем {MIN_VALUE_VALIDATOR_AMOUNT}",
+            ),
+            MaxValueValidator(
+                MAX_VALUE_VALIDATOR_AMOUNT,
+                message=f"Значение не может быть больше, \
+                    чем {MIN_VALUE_VALIDATOR_AMOUNT}",
+            ),
+        ],
         default=1,
     )

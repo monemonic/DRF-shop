@@ -1,53 +1,68 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.pagination import (
     LimitOffsetPagination, PageNumberPagination
 )
-from rest_framework.decorators import action
-from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .serializers import (
+    CategoryWithSubcategorySerializer,
+    ProductReadSerializer,
+    ShoppingCartAllProductsSerializer,
+    ShoppingCartSerializer,
+    ShoppingCartUpdateSerializer,
+)
+from backend.constants import (
+    CHANGE_VALUE_SHOPPING_CART,
+    VALUE_FOR_REMOVING_PRODUCT
+)
 from shop.models import (
     Category,
     Product,
-    ShoppingCart
-)
-from .serializers import (
-    ShoppingCartSerializer,
-    ProductReadSerializer,
-    CategoryWithSubcategorySerializer,
-    ShoppingCartUpdateSerializer
+    ShoppingCart,
 )
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """API для отображения категорий с подкатегориями."""
+
     queryset = Category.objects.all()
     serializer_class = CategoryWithSubcategorySerializer
     pagination_class = LimitOffsetPagination
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
+    """API для продуктов и обработки корзины."""
+
     queryset = Product.objects.all()
     serializer_class = ProductReadSerializer
     pagination_class = PageNumberPagination
 
     @action(detail=True, methods=["POST", "PATCH"])
-    def shopping_cart(self, request, pk):
-        """Добавление и удаление продуктов из корзины."""
-
+    def add_shopping_cart(self, request, pk):
+        """Добавление, изменение количества и удаление продуктов из корзины."""
         if request.method == 'PATCH':
-            product = get_object_or_404(ShoppingCart, product=pk)
             serializer = ShoppingCartUpdateSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             amount = serializer.validated_data.get("amount")
-
+            product = get_object_or_404(ShoppingCart, product=pk)
             if amount == '+':
-                product.amount += 1
-            if amount == '-':
-                product.amount -= 1
-            if isinstance(amount, int):
+                product.amount += CHANGE_VALUE_SHOPPING_CART
+            elif amount == '-':
+                product.amount -= CHANGE_VALUE_SHOPPING_CART
+            else:
                 product.amount = amount
-            product.save()
-            serializer = ShoppingCartSerializer(product)
+            if product.amount == VALUE_FOR_REMOVING_PRODUCT:
+                product.delete()
+                return Response(
+                    "Продукт успешно удален из корзины",
+                    status=status.HTTP_204_NO_CONTENT
+                )
+            else:
+                product.save()
+                serializer = ShoppingCartSerializer(product)
 
         else:
             product = get_object_or_404(Product, pk=pk).pk
@@ -55,13 +70,13 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
                 data=(
                     {"product": product,
                      "user": self.request.user.id,
-                     })
+                     }), context={"request": request}
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @shopping_cart.mapping.delete
+    @add_shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, pk):
         user = self.request.user
         product = get_object_or_404(Product, pk=pk)
@@ -82,6 +97,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["DELETE"])
     def clean_all_shopping_cart(self, request):
+        """Удаление всех продуктов из корзины пользователя."""
         count_del_objects, _ = ShoppingCart.objects.filter(
             user=self.request.user,
         ).delete()
@@ -96,3 +112,20 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             "Корзина успешно очищена.",
             status=status.HTTP_204_NO_CONTENT
         )
+
+    @action(detail=False, methods=["GET"],
+            permission_classes=(IsAuthenticated,)
+            )
+    def shopping_cart(self, request):
+        """
+        Отображение всех продуктов и их общей
+        цены в корзине пользователя.
+        """
+        queryset = ShoppingCart.objects.filter(user=self.request.user)
+        count_products = len(queryset)
+        total_price = sum([i.product.price*i.amount for i in queryset])
+        serializer = ShoppingCartAllProductsSerializer(
+            queryset,
+            context={'count': count_products, "total_price": total_price}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
